@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.draft == false }}
     steps:
-    - uses: actions/checkout@v7.0.0
+    - uses: actions/checkout@v7.0.1
       with:
         fetch-depth: 0
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@v7
       with:
         python-version: 3.9
     - uses: pre-commit/action@v3.0.1
@@ -30,7 +30,7 @@ jobs:
     if: ${{ github.event.pull_request.draft == false }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v7.0.0
+      uses: actions/checkout@v7.0.1
       with:
         fetch-depth: 0
     - name: Build Docker image
