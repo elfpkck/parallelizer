@@ -1,7 +1,7 @@
 [dependency-groups]
 dev = [
   "pydevd-pycharm",
-  "ruff>=0.15.20"
+  "ruff>=0.16.0"
 ]
 
 [project]
