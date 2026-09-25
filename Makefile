@@ -2,7 +2,7 @@ QGIS_VERSION ?= $(shell sed -n 's|^ARG QGIS_IMAGE=qgis/qgis:||p' Dockerfile)
 IMAGE := qgis-for-pptl:$(QGIS_VERSION)
 CONTAINER := qgis_pptl
 
-.PHONY: build run install install-dev test test-coverage test-perf test-all stop clean tag
+.PHONY: build run install install-dev test test-coverage test-perf test-all gifs stop clean tag
 
 define FINALIZE_CHANGELOG
 import os, pathlib, datetime, sys
@@ -57,6 +57,24 @@ test-perf:
 
 test-all:
 	docker exec $(CONTAINER) sh -c "cd /pptl && uv run --no-dev pytest /pptl/tests -o 'addopts=' --qgis_disable_gui"
+
+# Records the README GIFs (interactive map tool and Processing algorithm) into build/gifs/.
+# Re-record a subset with e.g. `make gifs SCENARIOS="distance"`; THEME is dark or light.
+THEME ?= dark
+SCENARIOS ?= interactive_activate interactive_single_click interactive_drag_rectangle \
+	interactive_pick_segment interactive_settings open default_usage distance angle by_longest
+RECORDER_IMAGE := pptl-recorder:$(QGIS_VERSION)
+RECORDER_PLATFORM := linux/amd64
+
+gifs: build
+	DOCKER_SCAN_SUGGEST=false docker build --platform $(RECORDER_PLATFORM) -t $(RECORDER_IMAGE) \
+		--build-arg BASE_IMAGE=$(IMAGE) tools/record_gifs
+	mkdir -p build/gifs
+	for scenario in $(SCENARIOS); do \
+		docker run --rm --platform $(RECORDER_PLATFORM) -e SCENARIO=$$scenario -e THEME=$(THEME) \
+			-v "$(CURDIR):/pptl:ro" -v "$(CURDIR)/build/gifs:/out" \
+			$(RECORDER_IMAGE) /pptl/tools/record_gifs/record.sh || exit 1; \
+	done
 
 stop:
 	-docker stop $(CONTAINER)

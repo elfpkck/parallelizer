@@ -51,10 +51,27 @@ A QGIS plugin that rotates polygons (and lines) to be parallel to a reference fe
 
 ### Interactive (map tool)
 1. Open the **Parallelizer** toolbar (also reachable from **Vector** → **Parallelizer**) and click the **Parallel to Line (interactive)** action.
-2. Click a line or polygon feature — or drag a rectangle over one — to set it as the reference. The reference is highlighted on the canvas (polygons get an outline plus translucent fill); if both a line and a polygon are under the click, the line wins.
-3. Toggle editing on the layers you want to modify, then either click a single line/polygon to rotate it, or drag a rectangle to rotate every line/polygon feature that intersects it across all editable visible layers.
-4. Use the **Settings…** action on the same toolbar to choose between rotation strategies (currently *Rotate by longest segment*). Settings persist via `QSettings`.
-5. Right-click or press **Esc** to clear the reference; press **Esc** again to deactivate the tool.
+2. Click a line or polygon feature, or drag a rectangle over one, to set it as the reference. The reference is highlighted on the canvas (polygons get an outline plus translucent fill); if both a line and a polygon are under the click, the line wins.
+
+   ![Set a reference][interactive_activate]
+
+3. Toggle editing on the layers you want to modify, then click a single line/polygon to rotate it...
+
+   ![Rotate features one click at a time][interactive_single_click]
+
+   ...or drag a rectangle to rotate every line/polygon feature that intersects it across all editable visible layers.
+
+   ![Rotate every feature in a rectangle][interactive_drag_rectangle]
+
+4. To align to one specific segment instead of the nearest one, turn on **Pick reference segment** (the reference becomes the segment you click) and/or **Pick target segment** (the target edge you click is the one made parallel).
+
+   ![Pick a single reference or target segment][interactive_pick_segment]
+
+5. Use the **Settings…** action on the same toolbar to choose the rotation strategy (*Rotate by longest segment*) and the segment-picking modes. Settings persist via `QSettings`.
+
+   ![Settings dialog][interactive_settings]
+
+6. Right-click or press **Esc** to clear the reference; press **Esc** again to deactivate the tool.
 
 ## Features
 
@@ -205,3 +222,8 @@ This project is licensed under the [GNU General Public License v2.0 or later](LI
 [distance]: https://raw.githubusercontent.com/elfpkck/pptl_images/refs/heads/master/distance.gif
 [angle]: https://raw.githubusercontent.com/elfpkck/pptl_images/refs/heads/master/angle.gif
 [by_longest]: https://raw.githubusercontent.com/elfpkck/pptl_images/refs/heads/master/by_longest.gif
+[interactive_activate]: https://raw.githubusercontent.com/elfpkck/pptl_images/refs/heads/master/interactive_activate.gif
+[interactive_single_click]: https://raw.githubusercontent.com/elfpkck/pptl_images/refs/heads/master/interactive_single_click.gif
+[interactive_drag_rectangle]: https://raw.githubusercontent.com/elfpkck/pptl_images/refs/heads/master/interactive_drag_rectangle.gif
+[interactive_pick_segment]: https://raw.githubusercontent.com/elfpkck/pptl_images/refs/heads/master/interactive_pick_segment.gif
+[interactive_settings]: https://raw.githubusercontent.com/elfpkck/pptl_images/refs/heads/master/interactive_settings.gif
