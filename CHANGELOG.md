@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+## [2.1.1] - 2026-09-26
 - Fix the interactive map tool crashing on every single click under QGIS 4 / Qt 6 (`QMouseEvent.x()`/`y()` no longer exist); drag-rectangle was unaffected
 - Fix the Processing algorithm failing on QGIS 3.22-3.36 when creating the `_rotated` output field
 - Fix polygon holes (interior rings) influencing the rotation: the pivot vertex and its adjacent segments now always come from the exterior ring
