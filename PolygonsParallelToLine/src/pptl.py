@@ -13,7 +13,7 @@ from qgis.core import (
     QgsWkbTypes,
 )
 
-from .const import COLUMN_NAME
+from .const import COLUMN_NAME, LINE_GEOMETRY
 from .parallelizer import compute_parallel_geometry
 from .reference import ReferenceLayer
 from .target import Target
@@ -47,7 +47,7 @@ class ParallelToReference:
     @cached_property
     def target_kind(self) -> Literal["line", "polygon"]:
         gtype = QgsWkbTypes.geometryType(self.params.target_layer.wkbType())
-        return "line" if gtype == QgsWkbTypes.LineGeometry else "polygon"
+        return "line" if gtype == LINE_GEOMETRY else "polygon"
 
     def run(self) -> None:
         # pydevd_pycharm.settrace("127.0.0.1", port=53100, stdoutToServer=True, stderrToServer=True) # noqa: ERA001
@@ -67,7 +67,7 @@ class ParallelToReference:
                 break
 
             processed = self.process_feature(feature)
-            self.params.sink.addFeature(processed, QgsFeatureSink.FastInsert)
+            self.params.sink.addFeature(processed, QgsFeatureSink.Flag.FastInsert)
             self.feedback.setProgress(int(i * total))
 
     def process_feature(self, feature: QgsFeature) -> QgsFeature:

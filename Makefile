@@ -1,4 +1,4 @@
-QGIS_VERSION ?= 4.0.0
+QGIS_VERSION ?= $(shell sed -n 's|^ARG QGIS_IMAGE=qgis/qgis:||p' Dockerfile)
 IMAGE := qgis-for-pptl:$(QGIS_VERSION)
 CONTAINER := qgis_pptl
 
@@ -23,7 +23,7 @@ endef
 export FINALIZE_CHANGELOG
 
 build:
-	DOCKER_SCAN_SUGGEST=false docker build -t $(IMAGE) -f Dockerfile .
+	DOCKER_SCAN_SUGGEST=false docker build --build-arg QGIS_IMAGE=qgis/qgis:$(QGIS_VERSION) -t $(IMAGE) -f Dockerfile .
 
 # -v /pptl/.venv - an anonymous volume, which "shadows" the host's `.venv` directory
 # --rm: container is auto-removed on stop so `make run` is idempotent across sessions

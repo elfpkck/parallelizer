@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 
 from qgis.core import QgsPoint, QgsProcessingException, QgsSpatialIndex, QgsWkbTypes
 
+from .const import LINE_GEOMETRY, POLYGON_GEOMETRY
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
@@ -38,7 +40,7 @@ class ReferenceFeature:
 class ReferenceLayer:
     def __init__(self, source: QgsProcessingFeatureSource):
         self.id_feature_map: dict[int, QgsFeature] = {x.id(): x for x in source.getFeatures()}
-        self.spatial_index = QgsSpatialIndex(flags=QgsSpatialIndex.FlagStoreFeatureGeometries)
+        self.spatial_index = QgsSpatialIndex(flags=QgsSpatialIndex.Flag.FlagStoreFeatureGeometries)
         self.spatial_index.addFeatures(self.id_feature_map.values())
 
     def get_closest_feature(self, point: QgsPointXY) -> ReferenceFeature:
@@ -71,9 +73,9 @@ def iter_segments(geom: QgsGeometry) -> Iterator[Segment]:
     # never produce a spurious segment that jumps between rings/parts.
     for part in geom.asGeometryCollection() or [geom]:
         gtype = QgsWkbTypes.geometryType(part.wkbType())
-        if gtype == QgsWkbTypes.LineGeometry:
+        if gtype == LINE_GEOMETRY:
             rings = part.asMultiPolyline() if part.isMultipart() else [part.asPolyline()]
-        elif gtype == QgsWkbTypes.PolygonGeometry:
+        elif gtype == POLYGON_GEOMETRY:
             polygons = part.asMultiPolygon() if part.isMultipart() else [part.asPolygon()]
             rings = [ring for poly in polygons for ring in poly]
         else:

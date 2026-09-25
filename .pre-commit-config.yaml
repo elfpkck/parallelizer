@@ -9,7 +9,7 @@ repos:
     require_serial: true
     args: [--config-file=pyproject.toml]
     additional_dependencies: [qgis-stubs]
-    exclude: (.*/plugin\.py)|(.*/provider\.py)|(.*/test.*)|(PolygonsParallelToLine/__init__\.py)
+    exclude: (.*/plugin\.py)|(.*/provider\.py)|(.*/test.*)|(PolygonsParallelToLine/__init__\.py)|(tests/conftest\.py)
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.13.0
   hooks:

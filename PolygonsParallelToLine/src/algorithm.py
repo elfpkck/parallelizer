@@ -5,16 +5,20 @@ from typing import Any, TYPE_CHECKING
 from qgis.core import (
     QgsField,
     QgsFields,
-    QgsProcessing,
     QgsProcessingAlgorithm,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterFeatureSink,
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterNumber,
 )
-from qgis.PyQt.QtCore import QMetaType  # type: ignore[import-not-found]
-
-from .const import COLUMN_NAME
+from .const import (
+    BOOL_FIELD_TYPE,
+    COLUMN_NAME,
+    NUMBER_TYPE_DOUBLE,
+    OUTPUT_LAYER_NAME,
+    SOURCE_TYPE_LINE,
+    SOURCE_TYPE_POLYGON,
+)
 from .pptl import Params, ParallelToReference
 
 if TYPE_CHECKING:
@@ -59,21 +63,21 @@ class Algorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT_LAYER,
-                "Output layer with rotated features",
+                OUTPUT_LAYER_NAME,
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.REFERENCE_LAYER,
                 "Reference layer",
-                [QgsProcessing.TypeVectorLine, QgsProcessing.TypeVectorPolygon],
+                [SOURCE_TYPE_LINE, SOURCE_TYPE_POLYGON],
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.TARGET_LAYER,
                 "Target layer",
-                [QgsProcessing.TypeVectorLine, QgsProcessing.TypeVectorPolygon],
+                [SOURCE_TYPE_LINE, SOURCE_TYPE_POLYGON],
             )
         )
         self.addParameter(
@@ -84,7 +88,7 @@ class Algorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.DISTANCE,
                 "Max distance from reference (in units of reference layer CRS) (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=NUMBER_TYPE_DOUBLE,
                 minValue=0.0,
                 defaultValue=0.0,
             )
@@ -93,7 +97,7 @@ class Algorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANGLE,
                 "Max angle (in degrees) for rotation (optional)",
-                type=QgsProcessingParameterNumber.Double,
+                type=NUMBER_TYPE_DOUBLE,
                 minValue=0.0,
                 maxValue=89.9,
                 defaultValue=89.9,
@@ -103,7 +107,7 @@ class Algorithm(QgsProcessingAlgorithm):
     def _create_output_fields(self, source_layer: QgsProcessingFeatureSource) -> QgsFields:
         fields = source_layer.fields()
         if fields.indexFromName(COLUMN_NAME) == -1:
-            fields.append(QgsField(COLUMN_NAME, QMetaType.Type.Bool))
+            fields.append(QgsField(COLUMN_NAME, BOOL_FIELD_TYPE))
         return fields
 
     def processAlgorithm(  # noqa: N802

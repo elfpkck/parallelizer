@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+- Fix the interactive map tool crashing on every single click under QGIS 4 / Qt 6 (`QMouseEvent.x()`/`y()` no longer exist); drag-rectangle was unaffected
+- Fix the Processing algorithm failing on QGIS 3.22-3.36 when creating the `_rotated` output field
+- Fix polygon holes (interior rings) influencing the rotation: the pivot vertex and its adjacent segments now always come from the exterior ring
 
 ## [2.1.0] - 2026-06-07
 - Accept line layers as the rotation target in the Processing algorithm (the interactive map tool already supported both). **Breaking:** the Processing parameter `POLYGON_LAYER` has been renamed to `TARGET_LAYER` (saved models referencing the old key must be updated); user-facing labels switch from "Polygon layer" / "Skip multipolygons" to "Target layer" / "Skip multipart features"

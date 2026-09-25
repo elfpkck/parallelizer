@@ -1,25 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 from qgis.PyQt.QtCore import QSettings
 
 from PolygonsParallelToLine.src.settings import MapToolSettings
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-
-@pytest.fixture(autouse=True)
-def _isolate_settings() -> Iterator[None]:
-    settings = QSettings()
-    settings.remove("PolygonsParallelToLine")
-    settings.sync()
-    yield
-    settings = QSettings()
-    settings.remove("PolygonsParallelToLine")
-    settings.sync()
+pytestmark = pytest.mark.usefixtures("isolate_settings")
 
 
 def test_default_by_longest_is_false():

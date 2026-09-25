@@ -1,4 +1,5 @@
-FROM --platform=linux/amd64 qgis/qgis:4.2.2
+ARG QGIS_IMAGE=qgis/qgis:4.2.2
+FROM --platform=linux/amd64 ${QGIS_IMAGE}
 
 # `--break-system-packages` allows installing uv to system Python
 RUN pip install --no-cache-dir --break-system-packages uv && \

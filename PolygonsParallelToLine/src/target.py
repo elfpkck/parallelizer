@@ -24,19 +24,21 @@ class Target:
     def center_xy(self) -> QgsPointXY:
         return self.geom.centroid().asPoint()
 
+    @cached_property
+    def outline(self) -> QgsGeometry:
+        # Interior rings and duplicate nodes are stripped on a copy so they don't influence the
+        # rotation pivot; the original geom is preserved for the actual rotate.
+        outline = QgsGeometry(self.geom).removeInteriorRings()
+        outline.removeDuplicateNodes()
+        return outline
+
     def get_closest_vertex(self, closest_reference: ReferenceFeature) -> QgsPoint:
-        nearest_point_on_ref = closest_reference.geom.nearestPoint(self.geom)
-        _, closest_vertex_idx = self.geom.closestVertexWithContext(nearest_point_on_ref.asPoint())
-        return self.geom.vertexAt(closest_vertex_idx)
+        nearest_point_on_ref = closest_reference.geom.nearestPoint(self.outline)
+        _, closest_vertex_idx = self.outline.closestVertexWithContext(nearest_point_on_ref.asPoint())
+        return self.outline.vertexAt(closest_vertex_idx)
 
     def get_adjacent_segments(self, target_vertex: QgsPoint) -> tuple[Segment, Segment]:
-        # Strip interior rings and duplicate nodes on a copy so they don't influence the
-        # rotation pivot; the original geom is preserved for the actual rotate.
-        temp_geom = QgsGeometry(self.geom)
-        temp_geom.removeInteriorRings()
-        temp_geom.removeDuplicateNodes()
-
-        for part_geom in temp_geom.asGeometryCollection():
+        for part_geom in self.outline.asGeometryCollection():
             for i, current_vertex in enumerate(part_geom.vertices()):
                 if current_vertex == target_vertex:
                     prev_vertex_idx, next_vertex_idx = part_geom.adjacentVertices(i)
