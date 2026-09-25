@@ -10,7 +10,6 @@ combo-box popups, layer-tree checkboxes) and clears the message bar on request.
 
 from __future__ import annotations
 
-import itertools
 import json
 import math
 import os
@@ -124,7 +123,7 @@ def building_fill(color: str) -> QgsFillSymbol:
 
 
 def road_points(points: dict[str, tuple[float, float]]) -> QgsGeometry:
-    for i, (a, b) in enumerate(itertools.pairwise(ROAD)):
+    for i, (a, b) in enumerate(zip(ROAD, ROAD[1:])):
         points[f"road{i}"] = ((a.x() + b.x()) / 2, (a.y() + b.y()) / 2)
     return QgsGeometry.fromPolylineXY(ROAD)
 

@@ -16,7 +16,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -27,7 +27,7 @@ POINTS: dict[str, list[int]] = json.loads((OUT_DIR / "points.json").read_text())
 LEFT, RIGHT = 1, 3
 OUTPUT_LAYER = "Output layer with rotated features"
 
-Target = str | list[int]
+Target = Union[str, list[int]]
 _cursor = [640, 450]
 
 
