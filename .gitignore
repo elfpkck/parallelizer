@@ -9,6 +9,7 @@ __pycache__/
 /.jekyll-metadata
 /Gemfile.lock
 /vendor/
+/build/
 
 # Personal Claude instructions, not for the repo
 CLAUDE.local.md

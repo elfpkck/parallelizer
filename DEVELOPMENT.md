@@ -13,6 +13,25 @@
 
 Performance smoke tests are skipped by default. Run them with `make test-perf` to catch order-of-magnitude regressions in the per-feature pipeline.
 
+## Recording README GIFs
+
+The GIFs in `README.md` (interactive map tool and Processing algorithm) are recorded by a scripted QGIS session, so they can be regenerated after UI changes:
+
+```shell
+make gifs                          # all scenarios
+make gifs SCENARIOS="distance"     # just one (the scenario name is the GIF name)
+make gifs THEME=light              # light QGIS theme (default: dark)
+```
+
+GIFs are written to `build/gifs/` (gitignored); upload them to the `pptl_images` repo, which the README links to. The setup lives in `tools/record_gifs/`:
+
+- `Dockerfile` extends the project image with Xvfb, openbox, xdotool and ffmpeg.
+- `qgis_startup.py` runs inside QGIS: builds the demo layers (a separate, more varied scene for Processing scenarios), loads the plugin, exports screen positions of features and toolbar buttons, and keeps `ui.json` updated with positions of menus, the Processing toolbox and algorithm widget, dialogs, combo-box popups and layer-tree checkboxes.
+- `driver.py` moves a real X cursor through each scenario, targeting static points by name and transient UI by `ui.json` key (e.g. `menu:Toolbox`, `param:DISTANCE`, `button:Run`). Add a scenario by adding a function there, its unrecorded preconditions to `SETUP`, and its name to `SCENARIOS` in the `Makefile` (and, for a Processing scenario, to `PROCESSING_SCENARIOS` in `qgis_startup.py`, otherwise it is recorded on the interactive scene).
+- `record.sh` ties it together inside the container and fails if the plugin raised any Python error during the recording.
+
+Gotchas: the QGIS image is amd64-only, so on Apple Silicon it runs emulated (roughly a minute per scenario). D-Bus is disabled on purpose, otherwise a GNOME keyring password prompt blocks QGIS startup. The install step needs about 120 MB free in Docker's disk.
+
 ## Remote Debugging
 
 These instructions are specific to PyCharm.
