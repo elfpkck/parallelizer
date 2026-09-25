@@ -39,6 +39,8 @@ POLYGONS = (
     "MultiPolygon (((3569747.66514745121821761 6347795.68019161652773619, 3569745.13767131650820374 6347794.74413178022950888, 3569750.80329665401950479 6347804.57218720857053995, 3569747.66514745121821761 6347795.68019161652773619)))",
 )
 
+HOLED_POLYGON = "Polygon ((0 0, 100 0, 100 100, 0 100, 0 0), (67.32 60, 40 67.32, 32.68 40, 60 32.68, 67.32 60))"
+
 
 @pytest.mark.parametrize(
     "lines, polys, expected, _rotated, distance, angle, longest, no_multi",
@@ -143,8 +145,20 @@ POLYGONS = (
             False,
             True,
         ),
+        (
+            # Reference sits inside a tilted hole: the pivot must come from the exterior ring
+            # (already parallel), not from the hole, so nothing rotates.
+            ("LineString (45 50, 55 50)",),
+            (HOLED_POLYGON,),
+            [HOLED_POLYGON],
+            [False],
+            0.0,
+            89.9,
+            False,
+            False,
+        ),
     ],
-    ids=["standard", "by_longest", "distance_angle", "no_multi"],
+    ids=["standard", "by_longest", "distance_angle", "no_multi", "interior_ring_ignored"],
 )
 def test_main_functionality(
     lines, polys, expected, _rotated, distance, angle, longest, no_multi, qgis_processing, add_features, converter

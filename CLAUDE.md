@@ -6,7 +6,7 @@ QGIS Processing plugin `PolygonsParallelToLine` (id `pptl`) — rotates polygons
 
 ## Environment
 
-Tests require QGIS Python bindings, so everything runs inside the `qgis_pptl` Docker container (image `qgis/qgis:4.0.0`, repo mounted at `/pptl`). The host `.venv` is *shadowed* inside the container by an anonymous volume — host installs are not visible to the container.
+Tests require QGIS Python bindings, so everything runs inside the `qgis_pptl` Docker container (image `qgis/qgis:<version>`, pinned once by `ARG QGIS_IMAGE` in `Dockerfile` and read by the `Makefile`; repo mounted at `/pptl`). The host `.venv` is *shadowed* inside the container by an anonymous volume — host installs are not visible to the container.
 
 See `Makefile` for build/run/install/test targets (all `make` invocations assume the container is running). Use `make test-all` as the default for running the suite — it covers both the unit tests and the `perf`-marked smoke test in one invocation. Reach for the narrower `make test` / `make test-perf` only when intentionally scoping to one slice.
 
@@ -41,7 +41,7 @@ Invariants:
 
 - Azimuth math (`src/azimuth.py`) normalizes to `[0, 180]` then `[-90, 90]` so the delta is the minimal signed rotation.
 - `Segment.length` / `Segment.azimuth` are `cached_property` — segments are immutable after construction.
-- Interior rings and duplicate vertices are stripped *only* in a temp geometry inside `Target.get_adjacent_segments` so they don't influence the rotation pivot; the original geometry is preserved for the actual rotate.
+- Interior rings and duplicate vertices are stripped *only* in the cached `Target.outline` copy, used by both `get_closest_vertex` and `get_adjacent_segments`, so they don't influence the rotation pivot; the original geometry is preserved for the actual rotate.
 
 ## Map tool
 
