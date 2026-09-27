@@ -1,0 +1,10 @@
+{
+  "name": "parallelizer-report-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "dev": "npx wrangler dev --var DRY_RUN:1",
+    "deploy": "npx wrangler deploy"
+  }
+}

@@ -1,0 +1,18 @@
+compatibility_date = "2026-09-01"
+main = "src/index.js"
+name = "parallelizer-reports"
+
+# Request logs would include client IP addresses; keep them off.
+[observability]
+enabled = false
+
+# Per-client limit: 5 reports per minute. Remove this block if your plan doesn't offer the binding (see README).
+[[ratelimits]]
+name = "REPORT_LIMITER"
+namespace_id = "1001"
+simple = {limit = 5, period = 60}
+
+[vars]
+DRY_RUN = "0"
+# "owner/repo" of the private repository that receives the reports.
+GITHUB_REPO = ""

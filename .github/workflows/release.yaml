@@ -30,6 +30,13 @@ jobs:
       env:
         QGIS_PLUGIN_TOKEN: ${{ secrets.QGIS_PLUGIN_TOKEN }}
       run: ': "${QGIS_PLUGIN_TOKEN:?QGIS_PLUGIN_TOKEN secret is not set}"'
+    - name: Check the report email and endpoint are set
+      env:
+        REPORT_EMAIL: ${{ secrets.REPORT_EMAIL }}
+        REPORT_ENDPOINT: ${{ secrets.REPORT_ENDPOINT }}
+      run: |
+        : "${REPORT_EMAIL:?REPORT_EMAIL secret is not set}"
+        : "${REPORT_ENDPOINT:?REPORT_ENDPOINT secret is not set}"
     - uses: actions/checkout@v7.0.1
       with: {fetch-depth: 0}
     - uses: actions/setup-python@v7
@@ -51,14 +58,32 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes
         fi
         echo "created=true" >> "${GITHUB_OUTPUT}"
+    # Kept out of the repository and written into the placeholder only for the package.
+    - name: Fill in the report contacts
+      env:
+        REPORT_EMAIL: ${{ secrets.REPORT_EMAIL }}
+        REPORT_ENDPOINT: ${{ secrets.REPORT_ENDPOINT }}
+      run: |
+        python - <<'PY'
+        import os
+        import pathlib
+
+        path = pathlib.Path("PolygonsParallelToLine/src/contact.py")
+        path.write_text(
+            "".join(f"{name} = {os.environ[name]!r}\n" for name in ("REPORT_EMAIL", "REPORT_ENDPOINT")),
+            encoding="utf-8",
+        )
+        PY
     - name: Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         QGIS_PLUGIN_TOKEN: ${{ secrets.QGIS_PLUGIN_TOKEN }}
+      # --allow-uncommitted-changes: package the filled-in contact.py (qgis-plugin-ci builds the zip from git).
       run: |
         qgis-plugin-ci release "${GITHUB_REF_NAME}" \
           --github-token "${GITHUB_TOKEN}" \
-          --qgis-token   "${QGIS_PLUGIN_TOKEN}"
+          --qgis-token   "${QGIS_PLUGIN_TOKEN}" \
+          --allow-uncommitted-changes
     - name: Delete orphan release on failure
       if: failure() && steps.create_release.outputs.created == 'true'
       env:

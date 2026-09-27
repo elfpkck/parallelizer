@@ -47,7 +47,7 @@ class Target:
                         Segment(start=target_vertex, end=part_geom.vertexAt(next_vertex_idx)),
                     )
 
-        msg = f"Vertex {target_vertex} not found in target {self.feature.id()}"
+        msg = f"Closest vertex not found in the outline of target {self.feature.id()}"
         raise QgsProcessingException(msg)
 
     def rotate(self, angle: float) -> None:

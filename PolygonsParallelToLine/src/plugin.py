@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from pathlib import Path
+import time
 from typing import TYPE_CHECKING
 
-from qgis.core import QgsApplication
+from qgis.core import Qgis, QgsApplication
+from qgis.PyQt.QtCore import Qt  # type: ignore[import-not-found]
 from qgis.PyQt.QtGui import QIcon  # type: ignore[import-not-found]
-from qgis.PyQt.QtWidgets import QAction  # type: ignore[import-not-found]
+from qgis.PyQt.QtWidgets import QAction, QPushButton  # type: ignore[import-not-found]
 
+from . import diagnostics
+from .const import PLUGIN_DIR
 from .provider import Provider
+from .report_dialog import ReportDialog
 from .settings import MapToolSettings
 from .settings_dialog import MapToolSettingsDialog
 
@@ -18,6 +22,7 @@ if TYPE_CHECKING:
     from .map_tool import ParallelToLineMapTool
 
 _MENU_NAME = "Parallelizer"
+_REPORT_OFFER_INTERVAL_S = 60.0
 
 
 class Plugin:
@@ -30,9 +35,12 @@ class Plugin:
         self.settings_action: QAction | None = None
         self.pick_reference_action: QAction | None = None
         self.pick_target_action: QAction | None = None
+        self.report_action: QAction | None = None
         self.map_tool: ParallelToLineMapTool | None = None
+        self._last_report_offer: float | None = None
 
     def initProcessing(self) -> None:
+        diagnostics.setup_logging()
         self.provider = Provider()
         QgsApplication.processingRegistry().addProvider(self.provider)
 
@@ -49,7 +57,7 @@ class Plugin:
         self.toolbar = self.iface.addToolBar(_MENU_NAME)
         self.toolbar.setObjectName("PolygonsParallelToLineToolBar")
 
-        icon_path = Path(__file__).resolve().parent.parent / "icons" / "icon.png"
+        icon_path = PLUGIN_DIR / "icons" / "icon.png"
         self.parallelize_action = QAction(
             QIcon(str(icon_path)), "Parallel to Line (interactive)", self.iface.mainWindow()
         )
@@ -83,6 +91,14 @@ class Plugin:
         self.settings_action.triggered.connect(self._open_settings_dialog)
         self.toolbar.addAction(self.settings_action)
         self.iface.addPluginToVectorMenu(_MENU_NAME, self.settings_action)
+
+        self.report_action = QAction("Report a problem…", self.iface.mainWindow())
+        self.report_action.triggered.connect(self._open_report_dialog)
+        self.iface.addPluginToVectorMenu(_MENU_NAME, self.report_action)
+        diagnostics.notifier.error_recorded.connect(self._offer_report, Qt.ConnectionType.QueuedConnection)
+        problem = diagnostics.previous_session_problem()
+        if problem is not None:
+            self._offer_report(problem)
 
         self.map_tool = ParallelToLineMapTool(self.iface, self.settings)
         self.map_tool.deactivated.connect(self._on_map_tool_deactivated)
@@ -127,18 +143,48 @@ class Plugin:
         dialog = MapToolSettingsDialog(self.settings, self.iface.mainWindow())
         dialog.exec()
 
+    def _open_report_dialog(self) -> None:
+        if self.iface is None:
+            return
+        report = diagnostics.build_report(self.settings)
+        dialog = ReportDialog(
+            report,
+            diagnostics.issue_title(),
+            self.iface.mainWindow(),
+            geometries=diagnostics.geometry_block if diagnostics.has_geometries() else None,
+        )
+        dialog.exec()
+
+    def _offer_report(self, text: str = "Hit an unexpected error.") -> None:
+        if self.iface is None:
+            return
+        now = time.monotonic()
+        if self._last_report_offer is not None and now - self._last_report_offer < _REPORT_OFFER_INTERVAL_S:
+            return
+        self._last_report_offer = now
+        bar = self.iface.messageBar()
+        item = bar.createMessage(_MENU_NAME, text)
+        button = QPushButton("Report a problem…", item)
+        button.clicked.connect(self._open_report_dialog)
+        item.layout().addWidget(button)
+        bar.pushWidget(item, Qgis.MessageLevel.Warning, 15)
+
     def unload(self) -> None:
         if self.provider is not None:
             QgsApplication.processingRegistry().removeProvider(self.provider)
+            self.provider = None
         if self.iface is not None:
-            if self.parallelize_action is not None:
-                self.iface.removePluginVectorMenu(_MENU_NAME, self.parallelize_action)
-            if self.pick_reference_action is not None:
-                self.iface.removePluginVectorMenu(_MENU_NAME, self.pick_reference_action)
-            if self.pick_target_action is not None:
-                self.iface.removePluginVectorMenu(_MENU_NAME, self.pick_target_action)
-            if self.settings_action is not None:
-                self.iface.removePluginVectorMenu(_MENU_NAME, self.settings_action)
+            for action in (
+                self.parallelize_action,
+                self.pick_reference_action,
+                self.pick_target_action,
+                self.settings_action,
+                self.report_action,
+            ):
+                if action is not None:
+                    self.iface.removePluginVectorMenu(_MENU_NAME, action)
+            if self.report_action is not None:
+                diagnostics.notifier.error_recorded.disconnect(self._offer_report)
             if self.map_tool is not None:
                 canvas = self.iface.mapCanvas()
                 if canvas.mapTool() is self.map_tool:
@@ -149,6 +195,8 @@ class Plugin:
         self.settings_action = None
         self.pick_reference_action = None
         self.pick_target_action = None
+        self.report_action = None
         self.toolbar = None
         self.map_tool = None
         self.settings = None
+        diagnostics.teardown_logging()

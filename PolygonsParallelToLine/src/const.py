@@ -1,7 +1,10 @@
+from pathlib import Path
+
 from qgis.core import Qgis, QgsProcessing, QgsProcessingParameterNumber, QgsWkbTypes
 
 COLUMN_NAME = "_rotated"
 OUTPUT_LAYER_NAME = "Output layer with rotated features"
+PLUGIN_DIR = Path(__file__).resolve().parent.parent
 
 # Qgis.* scoped enums were added in QGIS 3.30/3.36; older releases fall back to the legacy enums, spelled
 # with their enum class so the plugin portal's Qt6 check (a static scan) accepts them.

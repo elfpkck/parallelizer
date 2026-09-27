@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from qgis.core import (
     Qgis,
+    QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsFeature,
     QgsFeatureRequest,
@@ -19,14 +20,16 @@ from qgis.PyQt.QtCore import QPoint, Qt  # type: ignore[import-not-found]
 from qgis.PyQt.QtGui import QColor  # type: ignore[import-not-found]
 
 from .const import LINE_GEOMETRY, POLYGON_GEOMETRY, SUPPORTED_GEOMETRIES
+from .diagnostics import MAX_TRACED_FEATURES, capture_errors, current_operation, logger, operation
 from .parallelizer import compute_parallel_geometry
 from .reference import ReferenceFeature, Segment, iter_segments
+from .snapshot import add_reference_geometry, describe_crs, describe_geometry, describe_layer, describe_project
 
 if TYPE_CHECKING:
-    from qgis.core import QgsCoordinateReferenceSystem
     from qgis.gui import QgisInterface, QgsMapMouseEvent
     from qgis.PyQt.QtGui import QKeyEvent  # type: ignore[import-not-found]
 
+    from .diagnostics import Operation
     from .settings import MapToolSettings
 
 
@@ -73,17 +76,21 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         self._drag_start_pos: QPoint | None = None
         self._drag_start_point: QgsPointXY | None = None
         self._is_dragging: bool = False
+        self._reference_sections: list[tuple[str, list[str]]] = []
 
+    @capture_errors
     def activate(self) -> None:
         super().activate()
         self.setCursor(Qt.CursorShape.CrossCursor)
         self._show_message("Click or drag-rectangle on a line or polygon to set the reference.", Qgis.MessageLevel.Info)
 
+    @capture_errors
     def deactivate(self) -> None:
         self._clear_reference()
         self._cancel_drag()
         super().deactivate()
 
+    @capture_errors
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Escape:
             if self._is_dragging:
@@ -97,12 +104,14 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
             return
         super().keyPressEvent(event)
 
+    @capture_errors
     def canvasPressEvent(self, event: QgsMapMouseEvent) -> None:
         if event.button() != Qt.MouseButton.LeftButton:
             return
         self._drag_start_pos = event.originalPixelPoint()
         self._drag_start_point = event.originalMapPoint()
 
+    @capture_errors
     def canvasMoveEvent(self, event: QgsMapMouseEvent) -> None:
         if self._drag_start_pos is None:
             return
@@ -114,6 +123,7 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
             self._start_selection_band()
         self._update_selection_band(event.originalMapPoint())
 
+    @capture_errors
     def canvasReleaseEvent(self, event: QgsMapMouseEvent) -> None:
         if event.button() == Qt.MouseButton.RightButton:
             self._cancel_drag()
@@ -128,16 +138,17 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         drag_start = self._drag_start_point
         self._cancel_drag()
 
-        if was_dragging and drag_start is not None:
-            release_point = event.originalMapPoint()
-            rect = QgsRectangle(drag_start, release_point)
-            if self.reference_geom is None:
-                self._set_reference_from_rect(rect)
-            else:
-                self._rotate_features_in_rect(rect)
-            return
+        with operation("map tool: click on nothing to use", idle=True, watchdog=True):
+            if was_dragging and drag_start is not None:
+                release_point = event.originalMapPoint()
+                rect = QgsRectangle(drag_start, release_point)
+                if self.reference_geom is None:
+                    self._set_reference_from_rect(rect)
+                else:
+                    self._rotate_features_in_rect(rect)
+                return
 
-        self._handle_single_click(event)
+            self._handle_single_click(event)
 
     def _handle_single_click(self, event: QgsMapMouseEvent) -> None:
         # QMouseEvent.x()/y() were removed in Qt 6 and pos() is deprecated there; originalPixelPoint() works on
@@ -180,11 +191,11 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
 
     def _set_reference_from_feature(self, layer: QgsVectorLayer, feature: QgsFeature, map_point: QgsPointXY) -> None:
         ref_geom = feature.geometry()
+        click_layer = self._point_in_layer_crs(map_point, layer)
         if self.settings.pick_reference_segment:
-            click_layer = self._point_in_layer_crs(map_point, layer)
             segment = _closest_segment_of(ref_geom, click_layer)
             ref_geom = QgsGeometry.fromPolylineXY([QgsPointXY(segment.start), QgsPointXY(segment.end)])
-        self._set_reference(ref_geom, layer.crs())
+        self._set_reference(ref_geom, layer, via="click", marker=QgsGeometry.fromPointXY(click_layer))
         self._show_message(
             "Reference set. Click or drag-rectangle to rotate line/polygon features.",
             Qgis.MessageLevel.Success,
@@ -197,7 +208,10 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         geom_type: QgsWkbTypes.GeometryType,
         map_point: QgsPointXY,
     ) -> None:
+        op = self._begin("map tool: rotate (click)", with_reference=True)
+        op.add("Target layer", describe_layer(layer))
         if not layer.isEditable():
+            logger.info("Click rotation skipped: target layer not editable")
             self._show_message(
                 f"Layer '{layer.name()}' is not in edit mode; toggle editing to rotate features.",
                 Qgis.MessageLevel.Warning,
@@ -205,18 +219,23 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
             return
 
         kind: Kind = "line" if geom_type == LINE_GEOMETRY else "polygon"
+        click_layer = self._point_in_layer_crs(map_point, layer)
         target_segment: Segment | None = None
         if self.settings.pick_target_segment:
-            click_layer = self._point_in_layer_crs(map_point, layer)
             target_segment = _closest_segment_of(feature.geometry(), click_layer)
+        reference = self._reference_for_layer(layer)
+        trace = self._trace_feature(op, reference, feature, layer.crs())
+        op.add_geometry("click", QgsGeometry.fromPointXY(click_layer), layer.crs())
         rotated = compute_parallel_geometry(
-            self._reference_for_layer(layer),
+            reference,
             feature.geometry(),
             kind,
             by_longest=self.settings.by_longest,
             target_segment=target_segment,
+            trace=trace,
         )
         if rotated is None:
+            logger.info("Click rotation: %s already parallel, pick_target_segment=%s", kind, target_segment is not None)
             self._show_message("Feature already parallel; no rotation applied.", Qgis.MessageLevel.Info)
             return
 
@@ -225,8 +244,10 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         if ok:
             layer.endEditCommand()
             layer.triggerRepaint()
+            logger.info("Click rotation: %s rotated, pick_target_segment=%s", kind, target_segment is not None)
         else:
             layer.destroyEditCommand()
+            logger.warning("Click rotation: changeGeometry failed for a %s (provider %s)", kind, layer.providerType())
             self._show_message("Failed to update feature geometry.", Qgis.MessageLevel.Warning)
 
     def _set_reference_from_rect(self, map_rect: QgsRectangle) -> None:
@@ -263,7 +284,7 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         if self.settings.pick_reference_segment:
             segment = _pick_segment_in_rect(ref_geom, rect_geom, layer_rect.center())
             ref_geom = QgsGeometry.fromPolylineXY([QgsPointXY(segment.start), QgsPointXY(segment.end)])
-        self._set_reference(ref_geom, layer.crs())
+        self._set_reference(ref_geom, layer, via="rectangle", marker=rect_geom)
         suffix = f" ({len(found)} features in selection; using topmost)" if len(found) > 1 else ""
         self._show_message(
             f"Reference set{suffix}. Click or drag-rectangle to rotate line/polygon features.",
@@ -277,6 +298,7 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         canvas = self.iface.mapCanvas()
         rotated_count = 0
         non_editable: list[str] = []
+        op = self._begin("map tool: rotate (rectangle)", with_reference=True)
 
         for canvas_layer in canvas.layers():
             if not isinstance(canvas_layer, QgsVectorLayer):
@@ -292,6 +314,7 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
             if not features:
                 continue
 
+            op.add(f"Target layer ({len(features)} feature(s) in the rectangle)", describe_layer(canvas_layer))
             if not canvas_layer.isEditable():
                 non_editable.append(canvas_layer.name())
                 continue
@@ -300,6 +323,11 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
             layer_rotated = self._rotate_layer_features(canvas_layer, features, kind, layer_rect=layer_rect)
             rotated_count += layer_rotated
 
+        logger.info(
+            "Rectangle rotation: %d feature(s) rotated, %d non-editable layer(s) skipped",
+            rotated_count,
+            len(non_editable),
+        )
         self._report_bulk_result(rotated_count, non_editable)
 
     def _rotate_layer_features(
@@ -311,12 +339,12 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         layer_rect: QgsRectangle | None = None,
     ) -> int:
         reference = self._reference_for_layer(layer)
+        op = current_operation()
         pick_target = self.settings.pick_target_segment and layer_rect is not None
-        rect_geom: QgsGeometry | None = None
-        rect_center: QgsPointXY | None = None
-        if pick_target and layer_rect is not None:
-            rect_geom = QgsGeometry.fromRect(layer_rect)
-            rect_center = layer_rect.center()
+        rect_geom = QgsGeometry.fromRect(layer_rect) if layer_rect is not None else None
+        rect_center = layer_rect.center() if layer_rect is not None else None
+        if rect_geom is not None and not any(role == "rectangle" for role, _ in op.geometries):
+            op.add_geometry("rectangle", rect_geom, layer.crs())
 
         layer.beginEditCommand("Parallel to Line (bulk)")
         layer_rotated = 0
@@ -332,6 +360,7 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
                     kind,
                     by_longest=self.settings.by_longest,
                     target_segment=target_segment,
+                    trace=self._trace_feature(op, reference, feature, layer.crs()),
                 )
                 if rotated is None:
                     continue
@@ -382,7 +411,46 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         transform = QgsCoordinateTransform(map_crs, layer_crs, QgsProject.instance())
         return transform.transformBoundingBox(map_rect)
 
-    def _set_reference(self, geom: QgsGeometry, source_crs: QgsCoordinateReferenceSystem) -> None:
+    def _begin(self, name: str, *, with_reference: bool = False) -> Operation:
+        """Name the running operation and snapshot the project, plus the reference set by an earlier click."""
+        op = current_operation()
+        op.describe_as(name)
+        op.add("Project and canvas", describe_project(self.iface.mapCanvas()))
+        if with_reference:
+            for title, lines in self._reference_sections:
+                op.add(f"{title} (set earlier)", lines)
+        return op
+
+    @staticmethod
+    def _trace_feature(
+        op: Operation, reference: QgsGeometry, feature: QgsFeature, crs: QgsCoordinateReferenceSystem
+    ) -> dict[str, Any] | None:
+        """Snapshot one target (up to MAX_TRACED_FEATURES per operation) and return its rotation trace."""
+        if op.traced_features >= MAX_TRACED_FEATURES:
+            return None
+        op.traced_features += 1
+        label = f"target {op.traced_features}"
+        geom = feature.geometry()
+        distance = reference.distance(geom)
+        op.add(
+            f"Target feature {op.traced_features}",
+            [f"id: {feature.id()}", f"distance to reference: {distance:.6g}", *describe_geometry(geom)],
+        )
+        add_reference_geometry(op, reference, geom, label, distance, crs)
+        op.add_geometry(label, geom, crs)
+        return op.add_trace(f"Rotation math for target feature {op.traced_features}")
+
+    def _set_reference(self, geom: QgsGeometry, layer: QgsVectorLayer, *, via: str, marker: QgsGeometry) -> None:
+        source_crs = layer.crs()
+        self._reference_sections = [
+            ("Reference layer", describe_layer(layer)),
+            ("Reference geometry", describe_geometry(geom)),
+        ]
+        op = self._begin(f"map tool: set reference ({via})")
+        for title, lines in self._reference_sections:
+            op.add(title, lines)
+        add_reference_geometry(op, geom, marker, via, geom.distance(marker), source_crs)
+        op.add_geometry(via, marker, source_crs)
         self._clear_reference()
         reference = QgsGeometry(geom)
         map_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
@@ -398,6 +466,15 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
             rubber_band.setFillColor(self.REFERENCE_FILL)
         rubber_band.setToGeometry(self.reference_geom)
         self.reference_rubber_band = rubber_band
+        logger.info(
+            "Reference set by %s: %s with %d vertices, pick_reference_segment=%s, layer CRS %s, canvas CRS %s",
+            via,
+            QgsWkbTypes.displayString(reference.wkbType()),
+            0 if reference.isNull() else reference.constGet().nCoordinates(),
+            self.settings.pick_reference_segment,
+            describe_crs(source_crs),
+            describe_crs(map_crs),
+        )
 
     def _reference_for_layer(self, layer: QgsVectorLayer) -> QgsGeometry:
         if self.reference_geom is None:
