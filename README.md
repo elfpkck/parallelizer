@@ -3,9 +3,9 @@
 
 [![QGIS](https://qgis.github.io/qgis-uni-navigation/logo.svg)](https://qgis.org)
 
-# Parallelizer - QGIS Python Plugin
+# Parallelizer: Align Polygons and Lines (QGIS Plugin)
 
-A QGIS plugin that rotates polygons (and lines) to be parallel to a reference feature (line or polygon — polygon boundary rings are treated as polylines). Two entry points: a batch Processing algorithm that operates on whole layers, and an interactive map tool that lets you pick a reference feature on the canvas and then click — or drag-rectangle — individual line/polygon features to rotate them in place.
+A QGIS plugin that rotates polygons and lines so they run parallel to the nearest line or polygon edge: building footprints to streets or parcel boundaries, parking stalls to curbs, and similar. Use it as a batch Processing algorithm on whole layers, or as an interactive map tool: pick a reference feature on the canvas, then click a feature or drag a rectangle to rotate several at once.
 
 [Parallelizer Plugin on QGIS Plugins Web Portal](https://plugins.qgis.org/plugins/PolygonsParallelToLine/)
 
