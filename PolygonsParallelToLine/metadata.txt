@@ -1,21 +1,28 @@
 [general]
-name=Parallelizer
+name=Parallelizer: Align Polygons and Lines
 qgisMinimumVersion=3.22
 qgisMaximumVersion=4.99
-description=Rotates polygons and lines to be parallel to a reference line or polygon, in batch (Processing) or interactively from the map canvas
+description=Align polygons and lines parallel to the nearest road, line or polygon edge. Rotate building footprints to streets or parcels, in batch (Processing) or by clicking on the map.
 version=0.0.0
 author=Andrii Liekariev
 email=elfpkck@gmail.com
 hasProcessingProvider=yes
 
-about=This plugin rotates polygons (and lines) to be parallel to the nearest reference segment; the reference can be a line or polygon layer (polygon boundary rings are treated as polylines). Two entry points are provided: a batch Processing algorithm that operates on whole layers, and an interactive map tool that lets you pick a reference line or polygon feature on the canvas and then click — or drag-rectangle — individual line/polygon features to rotate them in place. It is useful when working with streets and buildings. Before using the plugin, we strongly recommend checking your data for geometric errors. A full description can be found at https://elfpkck.github.io/parallelizer/
+about=Rotate polygons and lines so they run parallel to the nearest line or polygon edge. Parallelizer aligns building footprints to streets and roads, parcels to cadastral boundaries, parking stalls to curbs, and any other features that should follow a reference orientation.
+
+    Two ways to use it:
+    - Processing algorithm: align whole layers in batch, with options for maximum distance, maximum angle, longest-edge alignment and skipping multipart features.
+    - Interactive map tool: pick a reference line or polygon on the canvas, then click a feature or drag a rectangle to rotate several at once. Edits are undoable.
+
+    Check your data for geometry errors first. Full documentation: https://elfpkck.github.io/parallelizer/
+    Created by Andrii Liekariev (https://www.linkedin.com/in/andrii-liekariev/).
 
 tracker=https://github.com/elfpkck/parallelizer/issues
 repository=https://github.com/elfpkck/parallelizer
 
 changelog=See CHANGELOG.md
 
-tags=polygon, line, vector, parallel, rotating, interactive, map tool
+tags=parallel, rotate, rotation, alignment, orientation, buildings, roads, streets, parcels, cadastre, digitizing, editing, geometry, vector, polygon, line, processing, interactive, map tool
 
 homepage=https://elfpkck.github.io/parallelizer/
 category=Vector
