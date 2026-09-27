@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+## [2.2.0] - 2026-09-28
 - Add **Vector › Parallelizer › Report a problem…**: a diagnostics report (versions, settings, last error, recent plugin log, and a description of the layers, project and features the failed or last operation worked on, with the rotation math for the last five operations; geometries only on request, moved to a local origin, with large references clipped around each target; Python stacks from a crash or a freeze in the previous session) you can review and edit, then copy, open as a pre-filled GitHub issue, open as a pre-filled email to the developer in your own mail app, or send with one click (**Send report**, no account needed) to the developer's private report service. See the privacy note on the docs site. Nothing is sent automatically. After an unexpected error, a message offers to open it. The plugin now also logs to the Log Messages panel (*Parallelizer* tab) and a small log file in the QGIS profile folder
 
 ## [2.1.3] - 2026-09-27
