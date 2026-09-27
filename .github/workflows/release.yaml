@@ -26,6 +26,10 @@ jobs:
     needs: [tests]
     runs-on: ubuntu-latest
     steps:
+    - name: Check the plugin portal token is set
+      env:
+        QGIS_PLUGIN_TOKEN: ${{ secrets.QGIS_PLUGIN_TOKEN }}
+      run: ': "${QGIS_PLUGIN_TOKEN:?QGIS_PLUGIN_TOKEN secret is not set}"'
     - uses: actions/checkout@v7.0.1
       with: {fetch-depth: 0}
     - uses: actions/setup-python@v7
@@ -50,13 +54,11 @@ jobs:
     - name: Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        OSGEO_USERNAME: ${{ secrets.OSGEO_USERNAME }}
-        OSGEO_PASSWORD: ${{ secrets.OSGEO_PASSWORD }}
+        QGIS_PLUGIN_TOKEN: ${{ secrets.QGIS_PLUGIN_TOKEN }}
       run: |
         qgis-plugin-ci release "${GITHUB_REF_NAME}" \
-          --github-token   "${GITHUB_TOKEN}" \
-          --osgeo-username "${OSGEO_USERNAME}" \
-          --osgeo-password "${OSGEO_PASSWORD}"
+          --github-token "${GITHUB_TOKEN}" \
+          --qgis-token   "${QGIS_PLUGIN_TOKEN}"
     - name: Delete orphan release on failure
       if: failure() && steps.create_release.outputs.created == 'true'
       env:

@@ -82,11 +82,12 @@ These instructions are specific to PyCharm.
    make tag VERSION=X.Y.Z
    ```
    This rewrites `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, inserts a fresh empty `## [Unreleased]` above it, commits, tags, and pushes both to `origin` atomically. `qgis-plugin-ci` requires a 3-part `MAJOR.MINOR.PATCH` version — `## [1.2]` would be silently ignored and the published changelog would be empty.
-2. The `Release` workflow (`.github/workflows/release.yaml`) runs the tests, then publishes to plugins.qgis.org and creates a GitHub Release with the `.zip` attached.
+2. The `Release` workflow (`.github/workflows/release.yaml`) runs the tests, checks that `QGIS_PLUGIN_TOKEN` is set, then publishes to plugins.qgis.org and creates a GitHub Release with the `.zip` attached.
 
 Required GitHub Secrets (one-time setup, repo Settings → Secrets and variables → Actions):
-- `OSGEO_USERNAME` — your plugins.qgis.org account username
-- `OSGEO_PASSWORD` — your plugins.qgis.org account password
+- `QGIS_PLUGIN_TOKEN`: an upload token created on the plugin's page on plugins.qgis.org (Tokens)
+
+Uploading with a token syncs the portal's `about` text from `metadata.txt` on every release. It does not sync `name` unless a portal admin enables "Allow update name" for the plugin.
 
 (`GITHUB_TOKEN` is provided automatically by Actions.)
 
