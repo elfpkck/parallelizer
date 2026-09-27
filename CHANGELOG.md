@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+- Rename the plugin on the QGIS plugin portal to "Parallelizer: Align Polygons and Lines" and rewrite its description, about text and tags so it is easier to find
 
 ## [2.1.2] - 2026-09-26
 - Pass the QGIS plugin portal's Qt6 compatibility check: legacy enum fallbacks for QGIS < 3.30/3.36 are now spelled with their enum class (no behavior change)
