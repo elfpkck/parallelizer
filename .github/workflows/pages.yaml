@@ -1,0 +1,47 @@
+name: Docs Site
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+    - README.md
+    - DEVELOPMENT.md
+    - LICENSE.txt
+    - PolygonsParallelToLine/icons/icon.png
+    - site/**
+    - tools/stage_site.sh
+    - .github/workflows/pages.yaml
+
+concurrency:
+  group: pages
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7.0.1
+    - run: tools/stage_site.sh
+    - uses: actions/configure-pages@v6.0.0
+    - uses: actions/jekyll-build-pages@v1.0.13
+      with:
+        source: build/site
+        destination: build/_site
+    - uses: actions/upload-pages-artifact@v5.0.0
+      with:
+        path: build/_site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - id: deployment
+      uses: actions/deploy-pages@v5.0.1

@@ -1,0 +1,18 @@
+theme: jekyll-theme-midnight
+title: Parallelizer
+tagline: Align Polygons and Lines in QGIS
+description: QGIS plugin to align polygons and lines parallel to the nearest road, line or polygon edge. Rotate building footprints to streets or parcels, in batch or interactively. By Andrii Liekariev.
+author: Andrii Liekariev
+# Don't also publish the raw .md sources next to their rendered pages.
+optional_front_matter:
+  remove_originals: true
+defaults:
+- scope:
+    path: ''
+  values:
+    image: /assets/og.jpg
+# A home page titled like the site gets "Parallelizer | <tagline>" instead of the README heading.
+- scope:
+    path: index.md
+  values:
+    title: Parallelizer

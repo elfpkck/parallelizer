@@ -53,6 +53,10 @@ Alongside the Processing algorithm, `Plugin.initGui` registers a dedicated "Para
 
 `tests/test_performance.py` is a perf smoke test marked `perf` — skipped by default via `addopts = "-m 'not perf'"` in `pyproject.toml`, run via `make test-perf`. Catches order-of-magnitude regressions in the per-feature pipeline.
 
+## Docs site
+
+https://elfpkck.github.io/parallelizer/ is deployed by `.github/workflows/pages.yaml` from what `tools/stage_site.sh` stages into `build/site` (sources in `site/`, home page from `README.md`), not from the repo root. See `DEVELOPMENT.md` for what is staged and local preview.
+
 ## Packaging & Remote Debugging
 
 See `DEVELOPMENT.md` for the plugin-portal zip command (must zip *only* `PolygonsParallelToLine/`, not the repo root) and the PyCharm `pydevd_pycharm.settrace` setup (port `53100`, commented stubs in `src/pptl.py` and `tests/test_main_functionality.py`).

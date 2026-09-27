@@ -1,0 +1,58 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+// The theme caps content at 650px, which shrinks the ~960px QGIS screen recordings.
+$column: 960px;
+$toc-gap: 30px;
+$toc-width: 220px;
+
+// Keep anchor targets (e.g. from the table of contents) clear of the theme's fixed header.
+html {
+  scroll-padding-top: 80px;
+}
+
+h1 {
+  text-wrap: balance;
+}
+
+// The theme styles its credits line only inside the header's #title block.
+// !optional keeps the build working when trying themes without #title.
+#credits {
+  @extend #title !optional;
+  display: flow-root;
+}
+
+.wrapper,
+section,
+#header nav {
+  max-width: $column;
+}
+
+// Wide screens: pin the README's table of contents in the right gutter.
+@media screen and (min-width: $column + 2 * ($toc-gap + $toc-width)) {
+  #table-of-contents {
+    display: none;
+  }
+
+  #table-of-contents + ul {
+    position: fixed;
+    top: 100px;
+    left: calc(50% + #{$column * 0.5 + $toc-gap});
+    width: $toc-width;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    margin: 0;
+
+    &::before {
+      content: "Contents";
+      display: block;
+      margin-bottom: 8px;
+      color: #aaa;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+}
