@@ -2,7 +2,7 @@
 
 ## Project
 
-QGIS Processing plugin `PolygonsParallelToLine` (id `pptl`): rotates polygons and lines to be parallel to the nearest segment of a reference line or polygon layer. Distributed via the QGIS plugin portal. Releases are tag-driven via `.github/workflows/release.yaml`; `qgis-plugin-ci` patches `metadata.txt`'s `version=` and `changelog=` in the zip at build time. In-repo `version=` strings are placeholders (`0.0.0`).
+QGIS Processing plugin `PolygonsParallelToLine` (id `pptl`): rotates polygons and lines to be parallel to the nearest segment of a reference line or polygon layer. Distributed via the QGIS plugin portal. Releases are tag-driven via `.github/workflows/release.yaml`; `qgis-plugin-ci` patches `metadata.txt`'s `version=` and `changelog=` in the zip at build time. In-repo `version=` strings are placeholders (`0.0.0`). `CHANGELOG.md` entries end up as plain text on the plugin portal: short bullets, no Markdown formatting.
 
 ## Environment
 
