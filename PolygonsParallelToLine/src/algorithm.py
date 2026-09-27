@@ -19,7 +19,9 @@ from .const import (
     SOURCE_TYPE_LINE,
     SOURCE_TYPE_POLYGON,
 )
+from .diagnostics import capture_errors, current_operation, operation
 from .pptl import Params, ParallelToReference
+from .snapshot import describe_processing, describe_project, describe_source
 
 if TYPE_CHECKING:
     from qgis.core import (
@@ -110,10 +112,24 @@ class Algorithm(QgsProcessingAlgorithm):
             fields.append(QgsField(COLUMN_NAME, BOOL_FIELD_TYPE))
         return fields
 
+    @capture_errors
     def processAlgorithm(  # noqa: N802
         self, parameters: dict[str, Any], context: QgsProcessingContext, feedback: QgsProcessingFeedback
     ) -> dict[str, str]:
+        with operation("processing run") as op:
+            op.add("Processing", describe_processing(parameters, context))
+            op.add("Project", describe_project(project=context.project()))
+            return self._process(parameters, context, feedback)
+
+    def _process(
+        self, parameters: dict[str, Any], context: QgsProcessingContext, feedback: QgsProcessingFeedback
+    ) -> dict[str, str]:
+        op = current_operation()
         target_layer = self.parameterAsSource(parameters, self.TARGET_LAYER, context)
+        op.add(
+            "Target layer",
+            describe_source(target_layer, self.parameterAsVectorLayer(parameters, self.TARGET_LAYER, context)),
+        )
         output_fields = self._create_output_fields(target_layer)
         sink, dest_id = self.parameterAsSink(
             parameters=parameters,
@@ -123,8 +139,13 @@ class Algorithm(QgsProcessingAlgorithm):
             geometryType=target_layer.wkbType(),
             crs=target_layer.sourceCrs(),
         )
+        reference_layer = self.parameterAsSource(parameters, self.REFERENCE_LAYER, context)
+        op.add(
+            "Reference layer",
+            describe_source(reference_layer, self.parameterAsVectorLayer(parameters, self.REFERENCE_LAYER, context)),
+        )
         params = Params(
-            reference_layer=self.parameterAsSource(parameters, self.REFERENCE_LAYER, context),
+            reference_layer=reference_layer,
             target_layer=target_layer,
             by_longest=self.parameterAsBool(parameters, self.LONGEST, context),
             no_multi=self.parameterAsBool(parameters, self.NO_MULTI, context),

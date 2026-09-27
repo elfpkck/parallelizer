@@ -86,6 +86,8 @@ These instructions are specific to PyCharm.
 
 Required GitHub Secrets (one-time setup, repo Settings → Secrets and variables → Actions):
 - `QGIS_PLUGIN_TOKEN`: an upload token created on the plugin's page on plugins.qgis.org (Tokens)
+- `REPORT_EMAIL`: the address the report dialog's **Send by email…** button writes to. The workflow writes it into `PolygonsParallelToLine/src/contact.py` only for the package, so it never appears in the repository. It is still readable inside the published zip, so prefer a forwarding alias you can replace (e.g. iCloud+ Hide My Email). Local and CI builds leave it empty, which hides the email option.
+- `REPORT_ENDPOINT`: the URL of the report receiver behind **Send report** (a Cloudflare Worker, set up as described in [`tools/report_worker/README.md`](tools/report_worker/README.md)). Written into `contact.py` the same way; empty hides the button.
 
 Uploading with a token syncs the portal's `about` text from `metadata.txt` on every release. It does not sync `name` unless a portal admin enables "Allow update name" for the plugin.
 

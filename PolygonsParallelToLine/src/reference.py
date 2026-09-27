@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from qgis.core import QgsPoint, QgsProcessingException, QgsSpatialIndex, QgsWkbTypes
 
 from .const import LINE_GEOMETRY, POLYGON_GEOMETRY
+from .diagnostics import UserInputError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -31,7 +32,7 @@ class ReferenceFeature:
     def get_closest_segment(self, point_xy: QgsPointXY) -> Segment:
         sqr_dist, _, next_vertex_idx, _ = self.geom.closestSegmentWithContext(point_xy)
         if sqr_dist < 0 or next_vertex_idx <= 0:
-            msg = f"Reference geometry has no valid segment near {point_xy}"
+            msg = "Reference geometry has no valid segment near the target"
             raise QgsProcessingException(msg)
         start, end = self.geom.vertexAt(next_vertex_idx - 1), self.geom.vertexAt(next_vertex_idx)
         return Segment(start=start, end=end)
@@ -47,8 +48,8 @@ class ReferenceLayer:
         closest_id = self.spatial_index.nearestNeighbor(point, 1)
 
         if not closest_id:
-            msg = f"No reference features found near point {point}"
-            raise QgsProcessingException(msg)
+            msg = "No reference features found"
+            raise UserInputError(msg)
 
         return ReferenceFeature(self.id_feature_map[closest_id[0]])
 

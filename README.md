@@ -209,6 +209,19 @@ This project is licensed under the [GNU General Public License v2.0 or later](LI
 - 🐛 [Report Issues](https://github.com/elfpkck/parallelizer/issues)
 - 💬 [Discussion Forum](https://github.com/elfpkck/parallelizer/discussions)
 
+### Reporting a problem
+
+When the plugin hits an unexpected error, a message with a **Report a problem…** button appears; you can also open it any time from **Vector › Parallelizer › Report a problem…**. It shows a report with:
+
+- the plugin, QGIS, Qt, Python, GEOS, PROJ and GDAL versions, your operating system, locale and screen scaling, and the other active plugins
+- the map tool settings
+- the last error and recent Parallelizer log lines
+- what the failed (or last) operation worked on, captured when it ran: project and canvas settings (coordinate systems, canvas rotation, snapping, topological editing), the reference and target layers (geometry type, coordinate system, provider, feature counts), the features (geometry type, parts, vertices, validity) and the rotation math (azimuths, segment lengths, chosen angle)
+
+Layer names, file paths and coordinates are not included; paths to your home and QGIS profile folders are replaced automatically, and you can edit the text before sharing it. To help reproduce a problem, you can tick **Include the geometries involved**: this adds them as WKT moved so the first reference vertex is at 0 0, which keeps their shapes and relative positions but not their real location. **Nothing is sent automatically**: the report only leaves your computer if you use **Send report** (sends the text to the developer's private report service; no account needed), **Copy to clipboard**, **Open GitHub issue** (a pre-filled issue in your browser, created only if you submit it; GitHub issues are public) or **Send by email** (a pre-filled message to the developer in your own mail app, sent only if you send it). See the [privacy note](https://elfpkck.github.io/parallelizer/privacy.html).
+
+The plugin also keeps a small log without layer names, file paths or coordinates: in the **Log Messages** panel under the *Parallelizer* tab, and in `parallelizer/parallelizer.log` inside your QGIS profile folder (**Settings › User Profiles › Open Active Profile Folder**).
+
 ---
 
 **Made with ❤️ for the QGIS community**

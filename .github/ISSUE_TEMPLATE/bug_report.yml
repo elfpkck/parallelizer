@@ -1,0 +1,38 @@
+name: Bug report
+description: The plugin raised an error or produced a wrong result
+labels: [bug]
+body:
+- type: markdown
+  attributes:
+    value: |
+      In QGIS, **Vector › Parallelizer › Report a problem…** (or the **Report a problem…** button shown after an error) fills in the diagnostics field below for you.
+      Issues are public: remove anything you don't want to share.
+
+      **Wrong result without an error?** The report describes the last few actions of the interactive map tool in detail, but a Processing run only in summary. So please reproduce the problem on one of the affected features with the map tool (click the reference, then the feature), then open **Report a problem…** right away. If you can share the shapes, tick **Include the geometries involved**: they are moved to a local origin, so their real location is not included.
+- type: textarea
+  id: what-happened
+  attributes:
+    label: What happened?
+    description: What did you do, what did you expect, and what happened instead?
+  validations:
+    required: true
+- type: textarea
+  id: steps
+  attributes:
+    label: Steps to reproduce
+    placeholder: |
+      1. Open a line layer and a polygon layer
+      2. ...
+  validations:
+    required: true
+- type: textarea
+  id: diagnostics
+  attributes:
+    label: Diagnostics report
+    description: From Vector › Parallelizer › Report a problem… in QGIS.
+    render: text
+- type: textarea
+  id: data
+  attributes:
+    label: Sample data or screenshots
+    description: Optional. A small layer that reproduces the problem helps a lot. Only attach data you are allowed to share publicly.

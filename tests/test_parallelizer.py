@@ -121,3 +121,36 @@ def test_polygon_target_with_explicit_segment_rotates_around_centroid(qgis_app):
 
     assert result is not None
     assert result.centroid().asPoint().distance(target.centroid().asPoint()) < 1e-6
+
+
+def test_trace_records_line_math():
+    trace: dict = {}
+
+    compute_parallel_geometry(
+        QgsGeometry.fromWkt(REFERENCE_HORIZONTAL),
+        QgsGeometry.fromWkt("LineString (0 10, 10 20)"),
+        "line",
+        by_longest=False,
+        trace=trace,
+    )
+
+    assert trace["strategy"] == "line"
+    assert trace["target_segment_pick"] == "smallest angle"
+    assert trace["outcome"] == "rotated"
+    assert math.isclose(abs(trace["delta"]), 45.0)
+
+
+def test_trace_records_polygon_math():
+    trace: dict = {}
+
+    compute_parallel_geometry(
+        QgsGeometry.fromWkt(REFERENCE_HORIZONTAL),
+        QgsGeometry.fromWkt("Polygon ((40 10, 50 20, 40 30, 30 20, 40 10))"),
+        "polygon",
+        by_longest=False,
+        trace=trace,
+    )
+
+    assert trace["strategy"] == "polygon"
+    assert {"prev_delta", "next_delta", "applied_delta"} <= trace.keys()
+    assert trace["outcome"] == "rotated"
