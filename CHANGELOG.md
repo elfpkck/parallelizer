@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ## [2.2.0] - 2026-09-28
-- Add **Vector › Parallelizer › Report a problem…**: a diagnostics report (versions, settings, last error, recent plugin log, and a description of the layers, project and features the failed or last operation worked on, with the rotation math for the last five operations; geometries only on request, moved to a local origin, with large references clipped around each target; Python stacks from a crash or a freeze in the previous session) you can review and edit, then copy, open as a pre-filled GitHub issue, open as a pre-filled email to the developer in your own mail app, or send with one click (**Send report**, no account needed) to the developer's private report service. See the privacy note on the docs site. Nothing is sent automatically. After an unexpected error, a message offers to open it. The plugin now also logs to the Log Messages panel (*Parallelizer* tab) and a small log file in the QGIS profile folder
+- Add "Report a problem..." (Vector > Parallelizer menu), also offered after an unexpected error. It shows a diagnostics report you can review and edit before sharing: versions, settings, the last error, recent log lines and a description of the last operations. Nothing is sent automatically
+- Share a report by copying it, opening a pre-filled GitHub issue, opening a pre-filled email, or with one click (Send report, no account needed) to the developer's private report service. See the privacy note on the docs site
+- Geometries are only included if you tick a box, and are moved to a local origin so their real location is not shared
+- After a crash or freeze, the next start offers to report it
+- The plugin now logs to the Log Messages panel (Parallelizer tab) and to a small log file in the QGIS profile folder
 
 ## [2.1.3] - 2026-09-27
 - Rename the plugin on the QGIS plugin portal to "Parallelizer: Align Polygons and Lines" and rewrite its description, about text and tags so it is easier to find

@@ -77,7 +77,7 @@ These instructions are specific to PyCharm.
 
 ## Releasing a New Plugin Version
 
-1. Make sure `CHANGELOG.md`'s `## [Unreleased]` section has the entries you want shipped, then on `main` with a clean working tree run:
+1. Make sure `CHANGELOG.md`'s `## [Unreleased]` section has the entries you want shipped. The plugin portal shows them as plain text, so write short bullets without Markdown formatting (no `**bold**`, `*italic*` or backticks). Then on `main` with a clean working tree run:
    ```shell
    make tag VERSION=X.Y.Z
    ```
