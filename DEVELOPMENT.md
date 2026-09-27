@@ -95,7 +95,7 @@ For a staged/experimental release, use a 3-part pre-release tag suffix (e.g. `1.
 
 ## Previewing the GitHub Pages Site Locally
 
-The project page (`_config.yml`) is served by GitHub Pages with the `jekyll-theme-midnight` theme. To preview the site or trial other themes locally:
+The project page is built by `.github/workflows/pages.yaml` with the `jekyll-theme-midnight` theme. Its sources live in `site/` (config, layout, styles, images); `tools/stage_site.sh` combines them with `README.md` (as the home page, from its title down), `DEVELOPMENT.md`, `LICENSE.txt` and the plugin icon (as the favicon) into `build/site`, so nothing else in the repo is published. To preview the site or trial other themes locally:
 
 1. Install Ruby 3.1. The `github-pages` gem pins Jekyll 3.9 / Liquid 4.0.3, which calls `String#tainted?` — removed in Ruby 3.2 — so newer Rubies will not work.
     ```shell
@@ -106,9 +106,9 @@ The project page (`_config.yml`) is served by GitHub Pages with the `jekyll-them
 2. Install the bundled gems and start the server:
     ```shell
     bundle install
-    bundle exec jekyll serve
+    make site
     ```
-    The site is served at http://127.0.0.1:4000.
-3. To try a different theme, stop the server (Ctrl-C), change `theme:` in `_config.yml`, and restart — Jekyll watches content but not config. The `Gemfile` already pulls in every GitHub-supported theme (`architect`, `cayman`, `dinky`, `hacker`, `leap-day`, `merlot`, `midnight`, `minimal`, `modernist`, `primer`, `slate`, `tactile`, `time-machine`).
+    The site is served at http://127.0.0.1:4000. Jekyll watches the staged copy, not the sources, so restart `make site` after editing `site/` or `README.md`.
+3. To try a different theme, stop the server (Ctrl-C), change `theme:` in `site/_config.yml`, and restart `make site`: Jekyll watches content but not config. The `Gemfile` already pulls in every GitHub-supported theme (`architect`, `cayman`, `dinky`, `hacker`, `leap-day`, `merlot`, `midnight`, `minimal`, `modernist`, `primer`, `slate`, `tactile`, `time-machine`).
 
 The `Gemfile` also lists several stdlib gems (`csv`, `bigdecimal`, `base64`, `logger`, `mutex_m`, `ostruct`, `drb`, `webrick`) that were promoted out of Ruby's default gem set in 3.0–3.4 and are still required by Jekyll 3.9 / its dependencies.

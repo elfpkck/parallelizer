@@ -11,7 +11,7 @@ hasProcessingProvider=yes
 about=Rotate polygons and lines so they run parallel to the nearest line or polygon edge. Parallelizer aligns building footprints to streets and roads, parcels to cadastral boundaries, parking stalls to curbs, and any other features that should follow a reference orientation.
 
     Two ways to use it:
-    - Processing algorithm: align whole layers in batch, with options for maximum distance, maximum angle, longest-edge alignment and skipping multipart features.
+    - Processing algorithm: align whole layers in batch, with options for maximum distance, maximum angle, longest-edge alignment, and skipping multipart features.
     - Interactive map tool: pick a reference line or polygon on the canvas, then click a feature or drag a rectangle to rotate several at once. Edits are undoable.
 
     Check your data for geometry errors first. Full documentation: https://elfpkck.github.io/parallelizer/

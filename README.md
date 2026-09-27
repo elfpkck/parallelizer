@@ -7,7 +7,7 @@
 
 A QGIS plugin that rotates polygons and lines so they run parallel to the nearest line or polygon edge: building footprints to streets or parcel boundaries, parking stalls to curbs, and similar. Use it as a batch Processing algorithm on whole layers, or as an interactive map tool: pick a reference feature on the canvas, then click a feature or drag a rectangle to rotate several at once.
 
-[Parallelizer Plugin on QGIS Plugins Web Portal](https://plugins.qgis.org/plugins/PolygonsParallelToLine/)
+Install from QGIS: **Plugins → Manage and Install Plugins**, search "Parallelizer" ([plugin page](https://plugins.qgis.org/plugins/PolygonsParallelToLine/)).
 
 ![Plugin Demo][intro]
 

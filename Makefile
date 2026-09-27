@@ -2,7 +2,7 @@ QGIS_VERSION ?= $(shell sed -n 's|^ARG QGIS_IMAGE=qgis/qgis:||p' Dockerfile)
 IMAGE := qgis-for-pptl:$(QGIS_VERSION)
 CONTAINER := qgis_pptl
 
-.PHONY: build run install install-dev test test-coverage test-perf test-all gifs stop clean tag
+.PHONY: build run install install-dev test test-coverage test-perf test-all gifs site stop clean tag
 
 define FINALIZE_CHANGELOG
 import os, pathlib, datetime, sys
@@ -75,6 +75,11 @@ gifs: build
 			-v "$(CURDIR):/pptl:ro" -v "$(CURDIR)/build/gifs:/out" \
 			$(RECORDER_IMAGE) /pptl/tools/record_gifs/record.sh || exit 1; \
 	done
+
+# Host-side (Ruby 3.1 + bundler, see DEVELOPMENT.md), not in the container.
+site:
+	tools/stage_site.sh
+	bundle exec jekyll serve -s build/site -d build/_site
 
 stop:
 	-docker stop $(CONTAINER)

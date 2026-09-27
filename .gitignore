@@ -4,9 +4,6 @@
 /junit.xml
 .DS_Store
 __pycache__/
-/_site/
-/.jekyll-cache/
-/.jekyll-metadata
 /Gemfile.lock
 /vendor/
 /build/
