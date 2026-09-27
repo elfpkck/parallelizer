@@ -59,6 +59,31 @@ def test_geometry_checkbox_inserts_block_before_log_lines_and_removes_it(qgis_ap
     assert dialog.report_text() == report
 
 
+def test_unticking_removes_an_edited_geometry_section(qgis_app):
+    report = f"Environment\n  QGIS: 4.2\n\n{LOG_SECTION}\n  line"
+    dialog = ReportDialog(report, geometries=lambda: f"{GEOMETRY_SECTION}\n  #1: click\n    target 1: Point (1 2)")
+    dialog.geometry_checkbox.setChecked(True)
+    dialog.text_edit.setPlainText(dialog.report_text().replace("Point (1 2)", "Point (1 3)"))
+
+    dialog.geometry_checkbox.setChecked(False)
+
+    assert dialog.report_text() == report
+
+
+def test_unticking_keeps_the_box_ticked_when_the_section_cannot_be_found(qgis_app):
+    dialog = ReportDialog(
+        "Environment", geometries=lambda: f"{GEOMETRY_SECTION}\n  #1: click\n    target 1: Point (1 2)"
+    )
+    dialog.geometry_checkbox.setChecked(True)
+    dialog.text_edit.setPlainText(dialog.report_text().replace(GEOMETRY_SECTION, "My shapes"))
+
+    dialog.geometry_checkbox.setChecked(False)
+
+    assert dialog.geometry_checkbox.isChecked()
+    assert "Point (1 2)" in dialog.report_text()
+    assert "Couldn't find the geometries" in dialog.status_label.text()
+
+
 def test_geometry_checkbox_disabled_without_geometries(qgis_app):
     dialog = ReportDialog("report")
 

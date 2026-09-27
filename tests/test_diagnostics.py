@@ -3,11 +3,19 @@ from __future__ import annotations
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+import threading
 from typing import NoReturn
 from urllib.parse import parse_qs, unquote, urlsplit
 
 import pytest
-from qgis.core import Qgis, QgsApplication, QgsGeometry, QgsPointXY, QgsProcessingException
+from qgis.core import (
+    Qgis,
+    QgsApplication,
+    QgsCoordinateReferenceSystem,
+    QgsGeometry,
+    QgsPointXY,
+    QgsProcessingException,
+)
 
 from PolygonsParallelToLine.src import contact, diagnostics
 from PolygonsParallelToLine.src.const import PLUGIN_DIR
@@ -328,6 +336,42 @@ def test_geometry_block_uses_one_origin_across_operations():
 
     assert "  #1: rotate\n    target 1: Point (5 3)" in block
     assert "  #2: set reference\n    reference: LineString (0 0, 10 0)" in block
+
+
+def test_geometry_block_converts_geometries_to_one_crs():
+    wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
+    mercator = QgsCoordinateReferenceSystem("EPSG:3857")
+    with diagnostics.operation("set reference") as op:
+        op.add_geometry("reference", QgsGeometry.fromWkt("Point (0 0)"), mercator)
+    with diagnostics.operation("rotate") as op:
+        op.add_geometry("target 1", QgsGeometry.fromWkt("Point (1 0)"), wgs84)
+        op.add_geometry("target 2", QgsGeometry.fromWkt("Point (0 0)"), mercator)
+
+    block = diagnostics.geometry_block() or ""
+
+    # 1 degree of longitude at the equator is about 111 km in EPSG:3857.
+    assert "target 1: Point (111319.49" in block
+    assert "target 2: Point (0 0)" in block
+
+
+def test_listing_operations_while_another_thread_finishes_them():
+    errors: list[BaseException] = []
+
+    def finish_operations() -> None:
+        for number in range(2000):
+            with diagnostics.operation(f"op {number}"):
+                pass
+
+    worker = threading.Thread(target=finish_operations)
+    worker.start()
+    while worker.is_alive():
+        try:
+            diagnostics.build_report()
+        except RuntimeError as exc:  # noqa: PERF203
+            errors.append(exc)
+    worker.join()
+
+    assert not errors
 
 
 def _write_dump(log_dir: Path, name: str, frame_file: str) -> None:

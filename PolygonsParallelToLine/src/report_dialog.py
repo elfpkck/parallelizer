@@ -15,7 +15,7 @@ from qgis.PyQt.QtWidgets import (  # type: ignore[import-not-found]
 )
 
 from . import contact
-from .diagnostics import LOG_SECTION, issue_url, mailto_url, plugin_metadata
+from .diagnostics import GEOMETRY_SECTION, LOG_SECTION, issue_url, mailto_url, plugin_metadata
 from .report_sender import ReportSender
 
 if TYPE_CHECKING:
@@ -128,7 +128,16 @@ class ReportDialog(QDialog):
             index = len(text) if index == -1 else index
             text = f"{text[:index]}{block}{text[index:]}"
         elif not checked:
-            text = text.replace(block, "")
+            removed = _without_geometry_section(text)
+            leftover = [line.strip() for line in self._geometry_block.splitlines()[1:] if line.strip()]
+            if removed is None and any(line in text for line in leftover):
+                # The header was edited away, so the section can't be found: never pretend it was removed.
+                self._show_status("Couldn't find the geometries to remove; delete them from the text yourself.")
+                self.geometry_checkbox.blockSignals(True)  # noqa: FBT003
+                self.geometry_checkbox.setChecked(True)
+                self.geometry_checkbox.blockSignals(False)  # noqa: FBT003
+                return
+            text = text if removed is None else removed
         self.text_edit.setPlainText(text)
 
     def report_text(self) -> str:
@@ -164,3 +173,20 @@ class ReportDialog(QDialog):
         # Copied first, in case the link had to be truncated to fit its length limit.
         self.copy_to_clipboard()
         QDesktopServices.openUrl(QUrl.fromEncoded(url.encode("ascii")))
+
+
+def _without_geometry_section(text: str) -> str | None:
+    """``text`` without the geometry section (its header and the indented lines under it, edited or not)."""
+    lines = text.split("\n")
+    if GEOMETRY_SECTION not in lines:
+        return None
+    start = lines.index(GEOMETRY_SECTION)
+    end = start + 1
+    while end < len(lines) and (not lines[end].strip() or lines[end].startswith(" ")):
+        end += 1
+    while end > start + 1 and not lines[end - 1].strip():
+        end -= 1
+    # The blank line inserted before the section goes too.
+    if start > 0 and not lines[start - 1].strip():
+        start -= 1
+    return "\n".join(lines[:start] + lines[end:])

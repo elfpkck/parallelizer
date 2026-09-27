@@ -17,23 +17,27 @@ if TYPE_CHECKING:
     from qgis.PyQt.QtNetwork import QNetworkReply  # type: ignore[import-not-found]
 
 SCHEMA_VERSION = 1
-# The receiver rejects bodies over 64 KB; the rest of the payload is small.
-MAX_REPORT_BYTES = 60_000
+# The whole JSON body, as sent: the receiver rejects bodies over 64 KB (MAX_BODY_BYTES in tools/report_worker).
+MAX_PAYLOAD_BYTES = 60_000
 TIMEOUT_MS = 15_000
 _CREATED = 201
 _TOO_MANY_REQUESTS = 429
 
 
 def build_payload(report: str, title: str = "") -> bytes:
-    fitted = fit_report(report, lambda text: len(text.encode("utf-8")) <= MAX_REPORT_BYTES, MAX_REPORT_BYTES)
-    payload = {
-        "schema": SCHEMA_VERSION,
-        "title": title,
-        "plugin_version": plugin_metadata("version") or "unknown",
-        "qgis_version": Qgis.version(),
-        "report": fitted,
-    }
-    return json.dumps(payload).encode("utf-8")
+    """The report is fitted by its JSON-encoded size, since escaping line breaks, quotes and non-ASCII grows it."""
+
+    def encode(text: str) -> bytes:
+        payload = {
+            "schema": SCHEMA_VERSION,
+            "title": title,
+            "plugin_version": plugin_metadata("version") or "unknown",
+            "qgis_version": Qgis.version(),
+            "report": text,
+        }
+        return json.dumps(payload).encode("utf-8")
+
+    return encode(fit_report(report, lambda text: len(encode(text)) <= MAX_PAYLOAD_BYTES, MAX_PAYLOAD_BYTES))
 
 
 class ReportSender(QObject):

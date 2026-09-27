@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from qgis.core import (
     Qgis,
+    QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsFeature,
     QgsFeatureRequest,
@@ -223,8 +224,8 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         if self.settings.pick_target_segment:
             target_segment = _closest_segment_of(feature.geometry(), click_layer)
         reference = self._reference_for_layer(layer)
-        trace = self._trace_feature(op, reference, feature)
-        op.add_geometry("click", QgsGeometry.fromPointXY(click_layer))
+        trace = self._trace_feature(op, reference, feature, layer.crs())
+        op.add_geometry("click", QgsGeometry.fromPointXY(click_layer), layer.crs())
         rotated = compute_parallel_geometry(
             reference,
             feature.geometry(),
@@ -343,7 +344,7 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         rect_geom = QgsGeometry.fromRect(layer_rect) if layer_rect is not None else None
         rect_center = layer_rect.center() if layer_rect is not None else None
         if rect_geom is not None and not any(role == "rectangle" for role, _ in op.geometries):
-            op.add_geometry("rectangle", rect_geom)
+            op.add_geometry("rectangle", rect_geom, layer.crs())
 
         layer.beginEditCommand("Parallel to Line (bulk)")
         layer_rotated = 0
@@ -359,7 +360,7 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
                     kind,
                     by_longest=self.settings.by_longest,
                     target_segment=target_segment,
-                    trace=self._trace_feature(op, reference, feature),
+                    trace=self._trace_feature(op, reference, feature, layer.crs()),
                 )
                 if rotated is None:
                     continue
@@ -421,7 +422,9 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         return op
 
     @staticmethod
-    def _trace_feature(op: Operation, reference: QgsGeometry, feature: QgsFeature) -> dict[str, Any] | None:
+    def _trace_feature(
+        op: Operation, reference: QgsGeometry, feature: QgsFeature, crs: QgsCoordinateReferenceSystem
+    ) -> dict[str, Any] | None:
         """Snapshot one target (up to MAX_TRACED_FEATURES per operation) and return its rotation trace."""
         if op.traced_features >= MAX_TRACED_FEATURES:
             return None
@@ -433,8 +436,8 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
             f"Target feature {op.traced_features}",
             [f"id: {feature.id()}", f"distance to reference: {distance:.6g}", *describe_geometry(geom)],
         )
-        add_reference_geometry(op, reference, geom, label, distance)
-        op.add_geometry(label, geom)
+        add_reference_geometry(op, reference, geom, label, distance, crs)
+        op.add_geometry(label, geom, crs)
         return op.add_trace(f"Rotation math for target feature {op.traced_features}")
 
     def _set_reference(self, geom: QgsGeometry, layer: QgsVectorLayer, *, via: str, marker: QgsGeometry) -> None:
@@ -446,8 +449,8 @@ class ParallelToLineMapTool(QgsMapToolIdentifyFeature):
         op = self._begin(f"map tool: set reference ({via})")
         for title, lines in self._reference_sections:
             op.add(title, lines)
-        add_reference_geometry(op, geom, marker, via, geom.distance(marker))
-        op.add_geometry(via, marker)
+        add_reference_geometry(op, geom, marker, via, geom.distance(marker), source_crs)
+        op.add_geometry(via, marker, source_crs)
         self._clear_reference()
         reference = QgsGeometry(geom)
         map_crs = self.iface.mapCanvas().mapSettings().destinationCrs()

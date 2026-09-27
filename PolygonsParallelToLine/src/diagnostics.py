@@ -25,7 +25,17 @@ import traceback
 from typing import IO, TYPE_CHECKING, Any, Callable, TypeVar, cast
 from urllib.parse import quote, urlencode
 
-from qgis.core import Qgis, QgsApplication, QgsGeometry, QgsMessageLog, QgsProcessingException, QgsProjUtils
+from qgis.core import (
+    Qgis,
+    QgsApplication,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsGeometry,
+    QgsMessageLog,
+    QgsProcessingException,
+    QgsProject,
+    QgsProjUtils,
+)
 from qgis.PyQt.QtCore import (  # type: ignore[import-not-found]
     PYQT_VERSION_STR,
     QObject,
@@ -107,6 +117,8 @@ class _State:
         default_factory=lambda: collections.deque(maxlen=MAX_KEPT_OPERATIONS)
     )
     failed_operation: Operation | None = None
+    # Guards operations and failed_operation: a Processing run finishes in its worker thread.
+    lock: threading.Lock = dataclasses.field(default_factory=threading.Lock)
     dump_files: dict[str, IO[str]] = dataclasses.field(default_factory=dict)
     owns_faulthandler: bool = False
     # Dumps found at startup, i.e. written by the previous session: kind -> text.
@@ -122,6 +134,8 @@ class Operation:
     sections: list[tuple[str, list[str] | dict[str, Any]]] = dataclasses.field(default_factory=list)
     # None stands for a geometry too large for the report; it is not kept in memory.
     geometries: list[tuple[str, QgsGeometry | None]] = dataclasses.field(default_factory=list)
+    # All geometries are kept in the CRS of the first one recorded with a CRS (layers can differ).
+    crs: QgsCoordinateReferenceSystem | None = None
     traced_features: int = 0
     duration_s: float | None = None
     failed: bool = False
@@ -140,11 +154,19 @@ class Operation:
         self.add(title, trace)
         return trace
 
-    def add_geometry(self, role: str, geom: QgsGeometry) -> None:
+    def add_geometry(self, role: str, geom: QgsGeometry, crs: QgsCoordinateReferenceSystem | None = None) -> None:
         if len(self.geometries) >= _MAX_OPERATION_GEOMETRIES or geom.isNull():
             return
-        small = geom.constGet().nCoordinates() <= MAX_WKT_VERTICES
-        self.geometries.append((role, QgsGeometry(geom) if small else None))
+        if geom.constGet().nCoordinates() > MAX_WKT_VERTICES:
+            self.geometries.append((role, None))
+            return
+        kept = QgsGeometry(geom)
+        if crs is not None and crs.isValid():
+            if self.crs is None:
+                self.crs = crs
+            else:
+                _transform(kept, crs, self.crs)
+        self.geometries.append((role, kept))
 
     def report_lines(self, label: str) -> list[str]:
         status = "failed" if self.failed else "finished"
@@ -275,8 +297,9 @@ def teardown_logging() -> None:
     _state.previous_dumps.clear()
     _state.last_error = None
     _state.last_error_type = None
-    _state.operations.clear()
-    _state.failed_operation = None
+    with _state.lock:
+        _state.operations.clear()
+        _state.failed_operation = None
 
 
 def log_file_path() -> Path | None:
@@ -318,7 +341,8 @@ def operation(name: str, *, idle: bool = False, watchdog: bool = False) -> Itera
         yield op
     except Exception:
         op.failed = True
-        _state.failed_operation = op
+        with _state.lock:
+            _state.failed_operation = op
         raise
     finally:
         if hang_file is not None:
@@ -326,7 +350,8 @@ def operation(name: str, *, idle: bool = False, watchdog: bool = False) -> Itera
         op.duration_s = time.perf_counter() - start
         _current.operation = None
         if op.failed or not op.idle:
-            _state.operations.appendleft(op)
+            with _state.lock:
+                _state.operations.appendleft(op)
 
 
 def current_operation() -> Operation:
@@ -464,9 +489,11 @@ def previous_session_problem() -> str | None:
 
 def _listed_operations() -> list[tuple[str, Operation]]:
     """The failed operation (label "failed") first, then the other kept ones, newest first, labeled #1, #2..."""
-    failed = _state.failed_operation
+    with _state.lock:
+        failed = _state.failed_operation
+        operations = list(_state.operations)
     listed = [("failed", failed)] if failed is not None else []
-    recent = [op for op in _state.operations if op is not failed]
+    recent = [op for op in operations if op is not failed]
     listed.extend((f"#{number}", op) for number, op in enumerate(recent, start=1))
     return listed
 
@@ -483,9 +510,10 @@ def geometry_block() -> str | None:
     listed = [(label, op) for label, op in _listed_operations() if op.geometries]
     if not listed:
         return None
-    kept = [(role, geom) for _, op in listed for role, geom in op.geometries if geom is not None]
-    first = next((geom for role, geom in kept if role.startswith("reference")), kept[0][1] if kept else None)
-    origin = next(first.vertices(), None) if first is not None else None
+    kept = [(role, geom, op.crs) for _, op in listed for role, geom in op.geometries if geom is not None]
+    first = next((item for item in kept if item[0].startswith("reference")), kept[0] if kept else None)
+    origin = next(first[1].vertices(), None) if first is not None else None
+    origin_crs = first[2] if first is not None else None
     lines = [GEOMETRY_SECTION]
     for label, op in listed:
         lines.append(f"  {label}: {op.name}")
@@ -494,9 +522,16 @@ def geometry_block() -> str | None:
                 lines.append(f"    {role}: omitted, more than {MAX_WKT_VERTICES} vertices; attach sample data instead")
                 continue
             shifted = QgsGeometry(geom)
+            if op.crs is not None and origin_crs is not None:
+                _transform(shifted, op.crs, origin_crs)
             shifted.translate(-origin.x(), -origin.y())
             lines.append(f"    {role}: {shifted.asWkt(6)}")
     return "\n".join(lines)
+
+
+def _transform(geom: QgsGeometry, source: QgsCoordinateReferenceSystem, dest: QgsCoordinateReferenceSystem) -> None:
+    if source != dest:
+        geom.transform(QgsCoordinateTransform(source, dest, QgsProject.instance()))
 
 
 def _indented(text: str | None) -> list[str]:

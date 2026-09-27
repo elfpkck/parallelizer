@@ -170,14 +170,19 @@ def reference_near(reference: QgsGeometry, target: QgsGeometry, distance: float)
     return reference if clipped.isNull() or clipped.isEmpty() else clipped
 
 
-def add_reference_geometry(
-    op: Operation, reference: QgsGeometry, target: QgsGeometry, target_label: str, distance: float
+def add_reference_geometry(  # noqa: PLR0913
+    op: Operation,
+    reference: QgsGeometry,
+    target: QgsGeometry,
+    target_label: str,
+    distance: float,
+    crs: QgsCoordinateReferenceSystem | None = None,
 ) -> None:
     """A small reference is added once as is; a large one is clipped around each target instead."""
     if reference.isNull():
         return
     if reference.constGet().nCoordinates() <= MAX_WKT_VERTICES:
         if not any(role == "reference" for role, _ in op.geometries):
-            op.add_geometry("reference", reference)
+            op.add_geometry("reference", reference, crs)
     else:
-        op.add_geometry(f"reference near {target_label}", reference_near(reference, target, distance))
+        op.add_geometry(f"reference near {target_label}", reference_near(reference, target, distance), crs)

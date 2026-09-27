@@ -68,12 +68,21 @@ def test_payload_caps_the_report_dropping_oldest_log_lines():
     log_lines = [f"  log line {i:05d} " + "x" * 100 for i in range(2000)]
     report = "\n".join(["Environment", "", diagnostics.LOG_SECTION, *log_lines])
 
-    fitted = json.loads(build_payload(report))["report"]
+    body = build_payload(report)
+    fitted = json.loads(body)["report"]
 
-    assert len(fitted.encode("utf-8")) <= report_sender.MAX_REPORT_BYTES
+    assert len(body) <= report_sender.MAX_PAYLOAD_BYTES
     assert diagnostics.TRUNCATED_NOTE in fitted
     assert "log line 01999" in fitted
     assert "log line 00000" not in fitted
+
+
+def test_payload_size_counts_json_escaping():
+    # Each line is 60 bytes as text but about 3x that once "é" becomes \u00e9 and quotes are escaped.
+    report = "\n".join(["Environment", "", diagnostics.LOG_SECTION, *[f'  "{"é" * 29}"' for _ in range(1500)]])
+    assert len(report.encode("utf-8")) < report_sender.MAX_PAYLOAD_BYTES * 2
+
+    assert len(build_payload(report)) <= report_sender.MAX_PAYLOAD_BYTES
 
 
 def test_send_posts_json_and_reports_the_reference(qgis_app, receiver):

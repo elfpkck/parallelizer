@@ -20,7 +20,8 @@ export default {
     if (!(request.headers.get("content-type") || "").startsWith("application/json")) {
       return json(415, { error: "send application/json" });
     }
-    // Before reading the body: rejected clients cost no more than their headers.
+    // Before reading the body. A body without a Content-Length is still read in full before the size check;
+    // Cloudflare's own request size limit bounds it.
     // Optional: the binding may not exist on every plan (see README).
     if (env.REPORT_LIMITER) {
       const { success } = await env.REPORT_LIMITER.limit({ key: await rateLimitKey(request) });
